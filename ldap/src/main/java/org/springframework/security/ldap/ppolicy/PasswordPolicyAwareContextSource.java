@@ -42,14 +42,18 @@ public class PasswordPolicyAwareContextSource extends DefaultSpringSecurityConte
 
         // First bind as manager user before rebinding as the specific principal.
         LdapContext ctx = (LdapContext) super.getContext(userDn, password);
+        logger.debug("ctx "+ctx );
 
         Control[] rctls = { new PasswordPolicyControl(false) };
 
         try {
             ctx.addToEnvironment(Context.SECURITY_PRINCIPAL, principal );
             ctx.addToEnvironment(Context.SECURITY_CREDENTIALS, credentials);
+        logger.debug("ctx 2 "+ctx );
             ctx.reconnect(rctls);
+        logger.debug("ctx 3 "+ctx );
         } catch(javax.naming.NamingException ne) {
+        logger.debug("ctx 4 "+ctx );
             PasswordPolicyResponseControl ctrl = PasswordPolicyControlExtractor.extractControl(ctx);
             if (debug) {
                 logger.debug("Failed to obtain context", ne);
@@ -59,7 +63,8 @@ public class PasswordPolicyAwareContextSource extends DefaultSpringSecurityConte
             LdapUtils.closeContext(ctx);
 
             if (ctrl != null) {
-                if (ctrl.isLocked()) {
+                if (ctrl.getErrorStatus() != null) {
+                    logger.debug("Password policy response "+ ctrl + " contains error: " + ctrl.getErrorStatus());
                     throw new PasswordPolicyException(ctrl.getErrorStatus());
                 }
             }
